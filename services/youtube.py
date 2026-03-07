@@ -8,11 +8,12 @@ import httpx
 import scrapetube
 from youtube_transcript_api import YouTubeTranscriptApi
 from youtube_transcript_api._errors import (
-    NoTranscriptFound,
     TranscriptsDisabled,
     VideoUnavailable,
 )
 
+# Singleton instance — v1.x uses instance-based API
+_api = YouTubeTranscriptApi()
 
 # All known YouTube video URL patterns
 _YT_PATTERNS = [
@@ -100,53 +101,42 @@ async def fetch_video_title(video_id: str) -> str:
             match = re.search(r"<title>([^<]+)</title>", html)
             if match:
                 title = match.group(1)
-                # Remove " - YouTube" suffix
                 return re.sub(r"\s*[-–]\s*YouTube\s*$", "", title).strip()
     except Exception:
         pass
     return video_id
 
 
-def _pick_transcript(transcript_list, languages: list[str], prefer_manual: bool) -> object:
+def _pick_transcript(transcripts: list, languages: list[str], prefer_manual: bool) -> object | None:
     """Select the best available transcript based on language priority and manual preference."""
-    manual_transcripts = []
-    generated_transcripts = []
+    manual = [t for t in transcripts if not t.is_generated]
+    generated = [t for t in transcripts if t.is_generated]
 
-    for t in transcript_list:
-        if t.is_generated:
-            generated_transcripts.append(t)
-        else:
-            manual_transcripts.append(t)
-
-    def find_by_lang(transcripts: list, langs: list[str]) -> object | None:
+    def find_by_lang(pool: list, langs: list[str]) -> object | None:
         for lang in langs:
-            for t in transcripts:
+            for t in pool:
                 if t.language_code.startswith(lang):
                     return t
         return None
 
     if prefer_manual:
-        result = find_by_lang(manual_transcripts, languages)
-        if result:
-            return result
-        result = find_by_lang(generated_transcripts, languages)
-        if result:
-            return result
+        result = find_by_lang(manual, languages) or find_by_lang(generated, languages)
     else:
-        result = find_by_lang(generated_transcripts, languages)
-        if result:
-            return result
-        result = find_by_lang(manual_transcripts, languages)
-        if result:
-            return result
+        result = find_by_lang(generated, languages) or find_by_lang(manual, languages)
 
-    # Final fallback: any available transcript
-    all_transcripts = (manual_transcripts if prefer_manual else generated_transcripts) + \
-                      (generated_transcripts if prefer_manual else manual_transcripts)
-    if all_transcripts:
-        return all_transcripts[0]
+    if result:
+        return result
 
-    return None
+    # Final fallback: first available transcript
+    all_transcripts = (manual + generated) if prefer_manual else (generated + manual)
+    return all_transcripts[0] if all_transcripts else None
+
+
+def _segment_text(seg) -> str:
+    """Extract text from a segment — handles both dict (v0.x) and object (v1.x) formats."""
+    if isinstance(seg, dict):
+        return seg.get("text", "")
+    return getattr(seg, "text", "")
 
 
 async def get_transcript(
@@ -165,7 +155,7 @@ async def get_transcript(
         raise ValueError("Не удалось извлечь ID видео из ссылки. Убедитесь, что это корректная YouTube-ссылка.")
 
     try:
-        transcript_list = YouTubeTranscriptApi.list_transcripts(video_id)
+        transcript_list = _api.list(video_id)
     except VideoUnavailable:
         raise ValueError("Видео недоступно или не существует.")
     except TranscriptsDisabled:
@@ -182,10 +172,9 @@ async def get_transcript(
     except Exception as e:
         raise ValueError(f"Не удалось загрузить субтитры: {e}")
 
-    # Join all text segments, clean up line breaks inside segments
     text_parts = []
     for seg in segments:
-        part = seg.text.replace("\n", " ").strip()
+        part = _segment_text(seg).replace("\n", " ").strip()
         if part:
             text_parts.append(part)
     full_text = " ".join(text_parts)

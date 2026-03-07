@@ -1,10 +1,10 @@
 llm:
   # Провайдер LLM: "claude" или "openrouter"
-  provider: "claude"
+  provider: "openrouter"
 
   # Модель для Claude: claude-sonnet-4-6, claude-opus-4-6, claude-haiku-4-5-20251001
   # Модель для OpenRouter: anthropic/claude-sonnet-4-6, openai/gpt-4o, google/gemini-2.0-flash, etc.
-  model: "claude-sonnet-4-6"
+  model: "google/gemini-3-flash-preview"
 
   # Максимальное количество токенов в ответе
   max_tokens: 4000
@@ -61,7 +61,7 @@ output:
   # Путь к папке для сохранения Markdown-файлов (папка Obsidian)
   # Windows: C:/Users/YourName/Obsidian/YouTube
   # Linux/Mac: /home/yourname/Obsidian/YouTube
-  folder: "D:/Obsidian/YouTube"
+  folder: "D:/Obsidian"
 
   # Добавлять YAML frontmatter с метаданными в начало файла
   add_frontmatter: true
