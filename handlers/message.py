@@ -68,6 +68,7 @@ async def _process_single_video(
             url=url,
             languages=settings.subtitles.languages,
             prefer_manual=settings.subtitles.prefer_manual,
+            proxies=settings.proxy.as_dict() or None,
         )
     except ValueError as e:
         return None, None, str(e)
@@ -93,6 +94,7 @@ async def _process_single_video(
             model=settings.llm.model,
             provider=settings.llm.provider,
             settings=settings.output,
+            transcript_text=result.text,
         )
     except Exception as e:
         return result.title, None, str(e)
@@ -130,6 +132,7 @@ async def _handle_video(message: Message, url: str, settings: Settings) -> None:
             url=url,
             languages=settings.subtitles.languages,
             prefer_manual=settings.subtitles.prefer_manual,
+            proxies=settings.proxy.as_dict() or None,
         )
     except ValueError as e:
         await status_msg.edit_text(f"❌ Ошибка при извлечении субтитров:\n{e}")
@@ -190,7 +193,9 @@ async def _handle_channel(message: Message, channel_url: str, settings: Settings
     )
 
     try:
-        video_urls = await youtube.get_channel_video_urls(channel_url, max_n)
+        video_urls = await youtube.get_channel_video_urls(
+            channel_url, max_n, proxies=settings.proxy.as_dict() or None
+        )
     except ValueError as e:
         await status_msg.edit_text(f"❌ {e}")
         return

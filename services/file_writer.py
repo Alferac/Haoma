@@ -1,7 +1,9 @@
 from __future__ import annotations
 
 import re
+import subprocess
 from datetime import datetime
+from functools import lru_cache
 from pathlib import Path
 
 import aiofiles
@@ -9,7 +11,8 @@ import aiofiles
 from config import OutputSettings
 
 
-_FORBIDDEN_CHARS = re.compile(r'[\\/:*?"<>|]')
+_FORBIDDEN_CHARS = re.compile(r"[\\/:*?\"<>|]")
+_REPO_ROOT = Path(__file__).resolve().parents[1]
 
 
 def _sanitize_filename(name: str, max_length: int) -> str:
@@ -19,7 +22,37 @@ def _sanitize_filename(name: str, max_length: int) -> str:
     return sanitized or "untitled"
 
 
-def _build_frontmatter(title: str, url: str, language: str, model: str, provider: str) -> str:
+def _build_text_label(date_str: str, safe_title: str) -> str:
+    return f"Text: {date_str} - {safe_title}"
+
+
+@lru_cache(maxsize=1)
+def _get_haoma_version() -> str:
+    try:
+        result = subprocess.run(
+            ["git", "describe", "--tags", "--always"],
+            cwd=_REPO_ROOT,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        version = result.stdout.strip()
+        if version:
+            return version
+    except (subprocess.CalledProcessError, FileNotFoundError):  # pragma: no cover - best effort
+        pass
+    return "unknown"
+
+
+def _build_frontmatter(
+    title: str,
+    url: str,
+    language: str,
+    model: str,
+    provider: str,
+    text_link: str,
+    haoma_version: str,
+) -> str:
     now = datetime.now()
     return (
         "---\n"
@@ -30,6 +63,8 @@ def _build_frontmatter(title: str, url: str, language: str, model: str, provider
         f"language: {language}\n"
         f"model: {model}\n"
         f"provider: {provider}\n"
+        f"Haoma ver: {haoma_version}\n"
+        f"Text: {text_link}\n"
         "tags:\n"
         "  - youtube\n"
         "  - summary\n"
@@ -45,21 +80,33 @@ async def save_note(
     model: str,
     provider: str,
     settings: OutputSettings,
+    transcript_text: str,
 ) -> Path:
-    """
-    Save LLM analysis as a Markdown note in the output folder.
-
-    Returns the path to the saved file.
-    """
     date_str = datetime.now().strftime("%Y-%m-%d")
     safe_title = _sanitize_filename(title, settings.max_filename_length)
-    filename = f"{date_str} - {safe_title}.md"
-    filepath = settings.folder / filename
+    note_basename = f"{date_str} - {safe_title}"
+    note_path = settings.folder / f"{note_basename}.md"
 
-    content_parts = []
+    text_label = _build_text_label(date_str, safe_title)
+    text_filename = _sanitize_filename(text_label.replace(":", "："), settings.max_filename_length)
+    text_path = settings.folder / f"{text_filename}.md"
+    text_link = f"[[{text_filename}|{text_label}]]"
 
+    haoma_version = _get_haoma_version()
+
+    content_parts: list[str] = []
     if settings.add_frontmatter:
-        content_parts.append(_build_frontmatter(title, url, language, model, provider))
+        content_parts.append(
+            _build_frontmatter(
+                title,
+                url,
+                language,
+                model,
+                provider,
+                text_link,
+                haoma_version,
+            )
+        )
 
     content_parts.append(f"# {title}\n\n")
     content_parts.append(f"> **Источник:** [{url}]({url})\n\n")
@@ -68,7 +115,10 @@ async def save_note(
 
     content = "".join(content_parts)
 
-    async with aiofiles.open(filepath, "w", encoding="utf-8") as f:
+    async with aiofiles.open(note_path, "w", encoding="utf-8") as f:
         await f.write(content)
 
-    return filepath
+    async with aiofiles.open(text_path, "w", encoding="utf-8") as tf:
+        await tf.write(transcript_text)
+
+    return note_path

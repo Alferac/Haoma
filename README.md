@@ -1,6 +1,6 @@
 # Haoma — YouTube Summary Bot для Obsidian
 
-Telegram-бот, который принимает ссылку на YouTube-видео или канал, извлекает субтитры без скачивания видео, анализирует их через LLM (Claude или OpenRouter) и сохраняет структурированный конспект в папку Obsidian в формате Markdown.
+Telegram-бот, который принимает ссылку на YouTube-видео или канал, извлекает субтитры без скачивания видео, анализирует их через LLM и сохраняет структурированный конспект в папку Obsidian в формате Markdown.
 
 ## Возможности
 
@@ -37,19 +37,6 @@ sudo apt install -y python3.11 python3.11-venv python3.11-pip git curl
 ```bash
 python3.11 --version   # должно быть Python 3.11.x
 ```
-
----
-
-### Шаг 3 — Создание пользователя для бота (рекомендуется)
-
-Запускать бота от отдельного непривилегированного пользователя — правило хорошего тона:
-
-```bash
-sudo useradd -m -s /bin/bash botuser
-sudo su - botuser
-```
-
-Все дальнейшие команды выполняются от имени `botuser`.
 
 ---
 
@@ -255,24 +242,7 @@ sudo systemctl enable --now syncthing@botuser
 **На Android/iOS:**
 Приложение [Möbius Sync](https://www.mobiussync.com/) (iOS) или [Syncthing](https://play.google.com/store/apps/details?id=com.nutomic.syncthingandroid) (Android).
 
-### Вариант B — Obsidian Sync (платно, $10/мес)
 
-1. Включи Obsidian Sync в настройках Obsidian
-2. На VPS поставь [obsidian-export](https://github.com/zoni/obsidian-export) или используй rclone для загрузки файлов
-
-### Вариант C — rclone (Google Drive, Dropbox, S3)
-
-```bash
-sudo apt install -y rclone
-rclone config  # настрой провайдер (Google Drive и т.д.)
-
-# Добавь в crontab синхронизацию каждые 5 минут
-crontab -e
-# Добавь строку:
-*/5 * * * * rclone copy /home/botuser/obsidian-notes gdrive:Obsidian/YouTube
-```
-
----
 
 ## Обновление бота
 

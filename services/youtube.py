@@ -12,8 +12,7 @@ from youtube_transcript_api._errors import (
     VideoUnavailable,
 )
 
-# Singleton instance — v1.x uses instance-based API
-_api = YouTubeTranscriptApi()
+# Instantiated per-call with optional proxy (see get_transcript / get_channel_video_urls)
 
 # All known YouTube video URL patterns
 _YT_PATTERNS = [
@@ -48,7 +47,7 @@ def is_channel_url(url: str) -> bool:
     return bool(_YT_CHANNEL_RE.match(url.strip()))
 
 
-async def get_channel_video_urls(channel_url: str, max_videos: int) -> list[str]:
+async def get_channel_video_urls(channel_url: str, max_videos: int, proxies: dict | None = None) -> list[str]:
     """
     Return up to `max_videos` video URLs from a YouTube channel (newest first).
 
@@ -60,6 +59,10 @@ async def get_channel_video_urls(channel_url: str, max_videos: int) -> list[str]
     loop = asyncio.get_event_loop()
 
     def _fetch() -> list[str]:
+        import os
+        if proxies:
+            os.environ.setdefault("HTTP_PROXY", proxies.get("http", ""))
+            os.environ.setdefault("HTTPS_PROXY", proxies.get("https", ""))
         videos = scrapetube.get_channel(
             channel_url=channel_url.strip(),
             limit=max_videos,
@@ -82,11 +85,12 @@ async def get_channel_video_urls(channel_url: str, max_videos: int) -> list[str]
     return urls
 
 
-async def fetch_video_title(video_id: str) -> str:
+async def fetch_video_title(video_id: str, proxies: dict | None = None) -> str:
     """Fetch video title from YouTube page without yt-dlp."""
     url = f"https://www.youtube.com/watch?v={video_id}"
     try:
-        async with httpx.AsyncClient(timeout=10, follow_redirects=True) as client:
+        proxy_url = (proxies or {}).get("https") or (proxies or {}).get("http") or None
+        async with httpx.AsyncClient(timeout=10, follow_redirects=True, proxy=proxy_url) as client:
             response = await client.get(
                 url,
                 headers={"Accept-Language": "ru,en;q=0.9"},
@@ -143,6 +147,7 @@ async def get_transcript(
     url: str,
     languages: list[str],
     prefer_manual: bool,
+    proxies: dict | None = None,
 ) -> TranscriptResult:
     """
     Extract transcript from YouTube video.
@@ -154,8 +159,9 @@ async def get_transcript(
     if not video_id:
         raise ValueError("Не удалось извлечь ID видео из ссылки. Убедитесь, что это корректная YouTube-ссылка.")
 
+    api = YouTubeTranscriptApi(proxies=proxies) if proxies else YouTubeTranscriptApi()
     try:
-        transcript_list = _api.list(video_id)
+        transcript_list = api.list(video_id)
     except VideoUnavailable:
         raise ValueError("Видео недоступно или не существует.")
     except TranscriptsDisabled:
@@ -179,7 +185,7 @@ async def get_transcript(
             text_parts.append(part)
     full_text = " ".join(text_parts)
 
-    title = await fetch_video_title(video_id)
+    title = await fetch_video_title(video_id, proxies=proxies)
 
     return TranscriptResult(
         video_id=video_id,

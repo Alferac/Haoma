@@ -32,6 +32,24 @@ class ChannelSettings:
 
 
 @dataclass
+class ProxySettings:
+    http: str
+    https: str
+
+    def as_dict(self) -> dict[str, str]:
+        result = {}
+        if self.http:
+            result["http"] = self.http
+        if self.https:
+            result["https"] = self.https
+        return result
+
+    @property
+    def enabled(self) -> bool:
+        return bool(self.http or self.https)
+
+
+@dataclass
 class OutputSettings:
     folder: Path
     add_frontmatter: bool
@@ -46,6 +64,7 @@ class Settings:
     llm: LLMSettings
     subtitles: SubtitleSettings
     channel: ChannelSettings
+    proxy: ProxySettings
     output: OutputSettings
 
 
@@ -65,6 +84,19 @@ def load_settings(config_path: str = "config.yaml") -> Settings:
     provider = llm_cfg.get("provider", "claude")
     if provider not in ("claude", "openrouter"):
         raise ValueError(f"llm.provider должен быть 'claude' или 'openrouter', получено: {provider!r}")
+
+    prompt_text: str | None = None
+    prompt_file_rel = llm_cfg.get("prompt_file")
+    if prompt_file_rel:
+        prompt_file_path = config_file.parent.joinpath(prompt_file_rel)
+        if not prompt_file_path.exists():
+            raise FileNotFoundError(f"Файл промта не найден: {prompt_file_path}")
+        prompt_text = prompt_file_path.read_text(encoding="utf-8")
+    else:
+        prompt_text = llm_cfg.get("prompt")
+
+    if not prompt_text:
+        prompt_text = "Summarize the following transcript:\n\n{transcript}"
 
     anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
     openrouter_key = os.environ.get("OPENROUTER_API_KEY", "")
@@ -87,7 +119,7 @@ def load_settings(config_path: str = "config.yaml") -> Settings:
             model=llm_cfg.get("model", "claude-sonnet-4-6"),
             max_tokens=int(llm_cfg.get("max_tokens", 4000)),
             temperature=float(llm_cfg.get("temperature", 0.3)),
-            prompt=llm_cfg.get("prompt", "Summarize the following transcript:\n\n{transcript}"),
+            prompt=prompt_text,
         ),
         subtitles=SubtitleSettings(
             languages=raw.get("subtitles", {}).get("languages", ["ru", "en"]),
@@ -95,6 +127,10 @@ def load_settings(config_path: str = "config.yaml") -> Settings:
         ),
         channel=ChannelSettings(
             max_videos=int(raw.get("channel", {}).get("max_videos", 10)),
+        ),
+        proxy=ProxySettings(
+            http=raw.get("proxy", {}).get("http", "") or "",
+            https=raw.get("proxy", {}).get("https", "") or "",
         ),
         output=OutputSettings(
             folder=output_folder,
