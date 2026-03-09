@@ -68,7 +68,6 @@ async def get_channel_video_urls(channel_url: str, max_videos: int, proxies: dic
             channel_url=channel_url.strip(),
             limit=max_videos,
             sort_by="newest",
-            content_type_filters=["video"],
         )
         return [
             f"https://www.youtube.com/watch?v={v['videoId']}"
