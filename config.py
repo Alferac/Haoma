@@ -95,11 +95,8 @@ def load_settings(config_path: str = "config.yaml") -> Settings:
             raise FileNotFoundError(f"Файл промта не найден: {prompt_file_path}")
         raw_prompt = prompt_file_path.read_text(encoding="utf-8")
         first_line, _, rest = raw_prompt.partition("\n")
-        if first_line.startswith("#"):
-            prompt_version = first_line.lstrip("#").strip()
-            prompt_text = rest.lstrip("\n")
-        else:
-            prompt_text = raw_prompt
+        prompt_version = first_line.strip()
+        prompt_text = rest.lstrip("\n")
     else:
         prompt_text = llm_cfg.get("prompt")
 
