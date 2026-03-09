@@ -81,6 +81,7 @@ async def _process_single_video(
             settings=settings.llm,
             anthropic_api_key=settings.anthropic_api_key,
             openrouter_api_key=settings.openrouter_api_key,
+            channel_name=result.channel_name,
         )
     except RuntimeError as e:
         return result.title, None, str(e)
@@ -152,6 +153,7 @@ async def _handle_video(message: Message, url: str, settings: Settings) -> None:
             settings=settings.llm,
             anthropic_api_key=settings.anthropic_api_key,
             openrouter_api_key=settings.openrouter_api_key,
+            channel_name=result.channel_name,
         )
     except RuntimeError as e:
         await status_msg.edit_text(f"❌ Ошибка при анализе:\n{e}")

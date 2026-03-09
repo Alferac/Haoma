@@ -29,6 +29,7 @@ _YT_CHANNEL_RE = re.compile(
 class TranscriptResult:
     video_id: str
     title: str
+    channel_name: str
     text: str
     language: str
     is_generated: bool
@@ -85,8 +86,8 @@ async def get_channel_video_urls(channel_url: str, max_videos: int, proxies: dic
     return urls
 
 
-async def fetch_video_title(video_id: str, proxies: dict | None = None) -> str:
-    """Fetch video title from YouTube page without yt-dlp."""
+async def fetch_video_metadata(video_id: str, proxies: dict | None = None) -> tuple[str, str]:
+    """Fetch video title and channel name from YouTube page. Returns (title, channel_name)."""
     url = f"https://www.youtube.com/watch?v={video_id}"
     try:
         proxy_url = (proxies or {}).get("https") or (proxies or {}).get("http") or None
@@ -97,18 +98,25 @@ async def fetch_video_title(video_id: str, proxies: dict | None = None) -> str:
             )
             response.raise_for_status()
             html = response.text
-            # Try og:title meta tag first (most reliable)
+
+            title = video_id
             match = re.search(r'<meta property="og:title" content="([^"]+)"', html)
             if match:
-                return match.group(1)
-            # Fallback: <title> tag
-            match = re.search(r"<title>([^<]+)</title>", html)
-            if match:
                 title = match.group(1)
-                return re.sub(r"\s*[-–]\s*YouTube\s*$", "", title).strip()
+            else:
+                match = re.search(r"<title>([^<]+)</title>", html)
+                if match:
+                    title = re.sub(r"\s*[-–]\s*YouTube\s*$", "", match.group(1)).strip()
+
+            channel_name = ""
+            match = re.search(r'"ownerChannelName":"([^"]+)"', html)
+            if match:
+                channel_name = match.group(1)
+
+            return title, channel_name
     except Exception:
         pass
-    return video_id
+    return video_id, ""
 
 
 def _pick_transcript(transcripts: list, languages: list[str], prefer_manual: bool) -> object | None:
@@ -185,11 +193,12 @@ async def get_transcript(
             text_parts.append(part)
     full_text = " ".join(text_parts)
 
-    title = await fetch_video_title(video_id, proxies=proxies)
+    title, channel_name = await fetch_video_metadata(video_id, proxies=proxies)
 
     return TranscriptResult(
         video_id=video_id,
         title=title,
+        channel_name=channel_name,
         text=full_text,
         language=transcript_obj.language_code,
         is_generated=transcript_obj.is_generated,

@@ -13,6 +13,7 @@ async def analyze_transcript(
     settings: LLMSettings,
     anthropic_api_key: str,
     openrouter_api_key: str,
+    channel_name: str = "",
 ) -> str:
     """
     Send transcript to LLM and return Markdown analysis.
@@ -24,6 +25,7 @@ async def analyze_transcript(
         title=title,
         url=url,
         transcript=transcript,
+        channel_name=channel_name,
     )
 
     if settings.provider == "claude":
