@@ -22,8 +22,8 @@ def _sanitize_filename(name: str, max_length: int) -> str:
     return sanitized or "untitled"
 
 
-def _build_text_label(date_str: str, safe_title: str) -> str:
-    return f"Text: {date_str} - {safe_title}"
+def _build_text_label(safe_title: str) -> str:
+    return f"Text: {safe_title}"
 
 
 @lru_cache(maxsize=1)
@@ -82,15 +82,13 @@ async def save_note(
     settings: OutputSettings,
     transcript_text: str,
 ) -> Path:
-    date_str = datetime.now().strftime("%Y-%m-%d")
     safe_title = _sanitize_filename(title, settings.max_filename_length)
-    note_basename = f"{date_str} - {safe_title}"
-    note_path = settings.folder / f"{note_basename}.md"
+    note_path = settings.folder / f"{safe_title}.md"
 
-    text_label = _build_text_label(date_str, safe_title)
+    text_label = _build_text_label(safe_title)
     text_filename = _sanitize_filename(text_label.replace(":", "："), settings.max_filename_length)
     text_path = settings.folder / f"{text_filename}.md"
-    text_link = f"[[{text_filename}|{text_label}]]"
+    text_link = f'"[[{text_filename}]]"'
 
     haoma_version = _get_haoma_version()
 
@@ -108,8 +106,6 @@ async def save_note(
             )
         )
 
-    content_parts.append(f"# {title}\n\n")
-    content_parts.append(f"> **Источник:** [{url}]({url})\n\n")
     content_parts.append(analysis)
     content_parts.append("\n")
 
