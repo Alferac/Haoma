@@ -76,6 +76,12 @@ def _build_frontmatter(
     )
 
 
+def get_note_path(title: str, settings: OutputSettings) -> Path:
+    """Return the expected output path for a note without creating it."""
+    safe_title = _sanitize_filename(title, settings.max_filename_length)
+    return settings.folder / f"{safe_title}.md"
+
+
 async def save_note(
     title: str,
     url: str,

@@ -73,6 +73,10 @@ async def _process_single_video(
     except ValueError as e:
         return None, None, str(e)
 
+    existing_path = file_writer.get_note_path(result.title, settings.output)
+    if existing_path.exists():
+        return result.title, existing_path, None
+
     try:
         analysis = await llm.analyze_transcript(
             transcript=result.text,
@@ -139,6 +143,13 @@ async def _handle_video(message: Message, url: str, settings: Settings) -> None:
         )
     except ValueError as e:
         await status_msg.edit_text(f"❌ Ошибка при извлечении субтитров:\n{e}")
+        return
+
+    existing_path = file_writer.get_note_path(result.title, settings.output)
+    if existing_path.exists():
+        await status_msg.edit_text(
+            f"⚠️ Конспект уже существует:\n<code>{existing_path}</code>"
+        )
         return
 
     sub_type = "ручные" if not result.is_generated else "авто"
