@@ -4,13 +4,13 @@ llm:
 
   # Модель для Claude: claude-sonnet-4-6, claude-opus-4-6, claude-haiku-4-5-20251001
   # Модель для OpenRouter: anthropic/claude-sonnet-4-6, openai/gpt-4o, google/gemini-2.0-flash, etc.
-  model: "google/gemini-3-flash-preview"
+  model: "openai/gpt-4o-mini"
 
   # Максимальное количество токенов в ответе
   max_tokens: 4000
 
   # Температура генерации (0.0 - 1.0)
-  temperature: 0.3
+  temperature: 0.0
 
   # Промт для анализа субтитров хранится отдельно в файле. Указывать путь относительно config.yaml
   prompt_file: "analysis_prompt.md"
@@ -42,7 +42,7 @@ output:
   # Путь к папке для сохранения Markdown-файлов (папка Obsidian)
   # Windows: C:/Users/YourName/Obsidian/YouTube
   # Linux/Mac: /home/yourname/Obsidian/YouTube
-  folder: "D:/Obsidian"
+  folder: "/home/deploy/obsidian-notes/source"
 
   # Добавлять YAML frontmatter с метаданными в начало файла
   add_frontmatter: true

@@ -126,7 +126,7 @@ def load_settings(config_path: str = "config.yaml") -> Settings:
             provider=provider,
             model=llm_cfg.get("model", "claude-sonnet-4-6"),
             max_tokens=int(llm_cfg.get("max_tokens", 4000)),
-            temperature=float(llm_cfg.get("temperature", 0.3)),
+            temperature=float(llm_cfg.get("temperature", 0.0)),
             prompt=prompt_text,
             prompt_version=prompt_version,
         ),

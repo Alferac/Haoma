@@ -1,4 +1,4 @@
-1.0
+1.1
 # Анализ субтитров и извлечение сущностей
 
 Ты — аналитик технического контента, специализирующийся на сжатии информации без потери смысла.
@@ -55,32 +55,18 @@
 Формат:
 ```yaml
 entities:
-  - name: "Mastra"
-    entity_type: framework
-    domain: [ai-agents]
-    sub_domain: "orchestration"
-    role_in_video: primary
-    what_learned: "Поддерживает MCP-серверы из коробки, заменяет n8n для TypeScript-разработчиков, имеет встроенные evals"
-    relates_to: ["n8n", "Claude API"]
-
-  - name: "n8n"
-    entity_type: platform
-    domain: [ai-agents, devops]
-    sub_domain: "workflow-automation"
-    role_in_video: compared
-    what_learned: "Автор перешёл с n8n на Mastra из-за ограничений при работе с AI-агентами"
-    relates_to: ["Mastra"]
-
-  - name: "vibecoding"
-    entity_type: approach
-    domain: [business]
-    sub_domain: "solo-founder"
-    role_in_video: recommended
-    what_learned: "Автор показывает что MVP можно собрать за день без навыков кода"
-    relates_to: ["Claude Code", "Cursor"]
+  - name: "<Точное название>"
+    entity_type: <тип>
+    domain: [<домен>]
+    sub_domain: "<поддомен>"
+    role_in_video: <роль>
+    what_learned: "<Что именно сказано в этом видео>"
+    relates_to: ["<связь1>", "<связь2>"]
 ```
 
 ВАЖНО:
+- Пример формата выше — это ШАБЛОН. Названия в нём вымышленные.
+  Извлекай ТОЛЬКО то, что реально упомянуто в субтитрах.
 - Извлекай даже очевидные вещи (языки программирования, ОС), если они играют роль в контексте видео.
 - НЕ придумывай сущности, которых нет в субтитрах.
 - Если видео не техническое и сущностей нет — поставь `entities: []`.
