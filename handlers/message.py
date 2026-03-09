@@ -170,6 +170,7 @@ async def _handle_video(message: Message, url: str, settings: Settings) -> None:
             model=settings.llm.model,
             provider=settings.llm.provider,
             settings=settings.output,
+            transcript_text=result.text,
         )
     except Exception as e:
         await status_msg.edit_text(f"❌ Ошибка при сохранении файла:\n{e}")
