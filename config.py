@@ -18,6 +18,7 @@ class LLMSettings:
     max_tokens: int
     temperature: float
     prompt: str
+    prompt_version: str = ""
 
 
 @dataclass
@@ -86,12 +87,19 @@ def load_settings(config_path: str = "config.yaml") -> Settings:
         raise ValueError(f"llm.provider должен быть 'claude' или 'openrouter', получено: {provider!r}")
 
     prompt_text: str | None = None
+    prompt_version: str = ""
     prompt_file_rel = llm_cfg.get("prompt_file")
     if prompt_file_rel:
         prompt_file_path = config_file.parent.joinpath(prompt_file_rel)
         if not prompt_file_path.exists():
             raise FileNotFoundError(f"Файл промта не найден: {prompt_file_path}")
-        prompt_text = prompt_file_path.read_text(encoding="utf-8")
+        raw_prompt = prompt_file_path.read_text(encoding="utf-8")
+        first_line, _, rest = raw_prompt.partition("\n")
+        if first_line.startswith("#"):
+            prompt_version = first_line.lstrip("#").strip()
+            prompt_text = rest.lstrip("\n")
+        else:
+            prompt_text = raw_prompt
     else:
         prompt_text = llm_cfg.get("prompt")
 
@@ -120,6 +128,7 @@ def load_settings(config_path: str = "config.yaml") -> Settings:
             max_tokens=int(llm_cfg.get("max_tokens", 4000)),
             temperature=float(llm_cfg.get("temperature", 0.3)),
             prompt=prompt_text,
+            prompt_version=prompt_version,
         ),
         subtitles=SubtitleSettings(
             languages=raw.get("subtitles", {}).get("languages", ["ru", "en"]),

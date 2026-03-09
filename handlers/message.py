@@ -96,6 +96,8 @@ async def _process_single_video(
             provider=settings.llm.provider,
             settings=settings.output,
             transcript_text=result.text,
+            prompt_version=settings.llm.prompt_version,
+            temperature=settings.llm.temperature,
         )
     except Exception as e:
         return result.title, None, str(e)
@@ -171,6 +173,8 @@ async def _handle_video(message: Message, url: str, settings: Settings) -> None:
             provider=settings.llm.provider,
             settings=settings.output,
             transcript_text=result.text,
+            prompt_version=settings.llm.prompt_version,
+            temperature=settings.llm.temperature,
         )
     except Exception as e:
         await status_msg.edit_text(f"❌ Ошибка при сохранении файла:\n{e}")

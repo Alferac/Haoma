@@ -52,6 +52,8 @@ def _build_frontmatter(
     provider: str,
     text_link: str,
     haoma_version: str,
+    prompt_version: str,
+    temperature: float,
 ) -> str:
     now = datetime.now()
     return (
@@ -63,6 +65,8 @@ def _build_frontmatter(
         f"language: {language}\n"
         f"model: {model}\n"
         f"provider: {provider}\n"
+        f"Temp: {temperature}\n"
+        f"Prompt ver: {prompt_version}\n"
         f"Haoma ver: {haoma_version}\n"
         f"Text: {text_link}\n"
         "tags:\n"
@@ -81,6 +85,8 @@ async def save_note(
     provider: str,
     settings: OutputSettings,
     transcript_text: str,
+    prompt_version: str = "",
+    temperature: float = 0.0,
 ) -> Path:
     safe_title = _sanitize_filename(title, settings.max_filename_length)
     note_path = settings.folder / f"{safe_title}.md"
@@ -103,6 +109,8 @@ async def save_note(
                 provider,
                 text_link,
                 haoma_version,
+                prompt_version,
+                temperature,
             )
         )
 
