@@ -1,7 +1,10 @@
 from __future__ import annotations
 
+import logging
 import re
 from pathlib import Path
+
+log = logging.getLogger(__name__)
 
 from aiogram import Router
 from aiogram.filters import Command
@@ -75,6 +78,7 @@ async def _process_single_video(
 
     existing_path = file_writer.get_note_path(result.title, settings.output)
     if existing_path.exists():
+        log.info("SKIP already exists: %s", result.title)
         return result.title, existing_path, None
 
     try:
@@ -88,6 +92,7 @@ async def _process_single_video(
             channel_name=result.channel_name,
         )
     except RuntimeError as e:
+        log.error("LLM error [%s]: %s", result.title, e)
         return result.title, None, str(e)
 
     try:
@@ -104,8 +109,10 @@ async def _process_single_video(
             temperature=settings.llm.temperature,
         )
     except Exception as e:
+        log.error("Save error [%s]: %s", result.title, e)
         return result.title, None, str(e)
 
+    log.info("SAVED: %s", result.title)
     return result.title, filepath, None
 
 
