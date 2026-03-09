@@ -74,6 +74,7 @@ async def _process_single_video(
             proxies=settings.proxy.as_dict() or None,
         )
     except ValueError as e:
+        log.warning("Transcript error [%s]: %s", url, e)
         return None, None, str(e)
 
     existing_path = file_writer.get_note_path(result.title, settings.output)
