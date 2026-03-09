@@ -225,10 +225,13 @@ async def _handle_channel(message: Message, channel_url: str, settings: Settings
     failed: list[tuple[str, str]] = []   # (url_or_title, reason)
 
     for idx, video_url in enumerate(video_urls, start=1):
-        await status_msg.edit_text(
-            f"⏳ Видео {idx}/{total}: обрабатываю...\n"
-            f"✅ Готово: {len(saved)}  ❌ Пропущено: {len(failed)}"
-        )
+        try:
+            await status_msg.edit_text(
+                f"⏳ Видео {idx}/{total}: обрабатываю...\n"
+                f"✅ Готово: {len(saved)}  ❌ Пропущено: {len(failed)}"
+            )
+        except Exception:
+            pass
 
         title, filepath, error = await _process_single_video(video_url, settings)
 
@@ -238,20 +241,10 @@ async def _handle_channel(message: Message, channel_url: str, settings: Settings
         else:
             saved.append((title, filepath))
 
-    # Final summary
-    await status_msg.delete()
-
-    lines = [f"<b>Канал обработан.</b> Видео: {total}\n"]
-    lines.append(f"✅ Сохранено: {len(saved)}   ❌ Пропущено: {len(failed)}\n")
-
-    if saved:
-        lines.append("\n<b>Сохранённые конспекты:</b>")
-        for title, fp in saved:
-            lines.append(f"• {title}\n  <code>{fp}</code>")
-
-    if failed:
-        lines.append("\n<b>Пропущенные видео:</b>")
-        for label, reason in failed:
-            lines.append(f"• {label}\n  <i>{reason}</i>")
-
-    await message.answer("\n".join(lines))
+    try:
+        await status_msg.edit_text(
+            f"✅ Канал обработан. Видео: {total}\n"
+            f"Сохранено: {len(saved)}   Пропущено: {len(failed)}"
+        )
+    except Exception:
+        pass
