@@ -1,7 +1,7 @@
 from __future__ import annotations
 
 import os
-from dataclasses import dataclass, field
+from dataclasses import dataclass
 from pathlib import Path
 from typing import Literal
 
@@ -30,6 +30,7 @@ class SubtitleSettings:
 @dataclass
 class ChannelSettings:
     max_videos: int
+    batch_delay_seconds: int
 
 
 @dataclass
@@ -133,6 +134,7 @@ def load_settings(config_path: str = "config.yaml") -> Settings:
         ),
         channel=ChannelSettings(
             max_videos=int(raw.get("channel", {}).get("max_videos", 10)),
+            batch_delay_seconds=int(raw.get("channel", {}).get("batch_delay_seconds", 60)),
         ),
         proxy=ProxySettings(
             http=raw.get("proxy", {}).get("http", "") or "",

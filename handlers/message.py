@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import asyncio
 import logging
 import re
 from pathlib import Path
@@ -232,6 +233,7 @@ async def _handle_channel(message: Message, channel_url: str, settings: Settings
     saved: list[tuple[str, Path]] = []   # (title, filepath)
     failed: list[tuple[str, str]] = []   # (url_or_title, reason)
 
+    delay = settings.channel.batch_delay_seconds
     for idx, video_url in enumerate(video_urls, start=1):
         try:
             await status_msg.edit_text(
@@ -246,13 +248,29 @@ async def _handle_channel(message: Message, channel_url: str, settings: Settings
         if error:
             label = title or video_url
             failed.append((label, error))
+            try:
+                await status_msg.edit_text(
+                    f"❌ Видео {idx}/{total}: ошибка\n"
+                    f"<i>{label}</i>\n{error}\n\n"
+                    f"✅ Готово: {len(saved)}  ❌ Пропущено: {len(failed)}"
+                )
+            except Exception:
+                pass
         else:
             saved.append((title, filepath))
 
+        if idx < total:
+            await asyncio.sleep(delay)
+
+    lines = [f"<b>Канал обработан.</b> Видео: {total}\n"]
+    lines.append(f"✅ Сохранено: {len(saved)}   ❌ Пропущено: {len(failed)}")
+
+    if failed:
+        lines.append("\n<b>Ошибки:</b>")
+        for label, reason in failed:
+            lines.append(f"• <i>{label}</i>\n  {reason}")
+
     try:
-        await status_msg.edit_text(
-            f"✅ Канал обработан. Видео: {total}\n"
-            f"Сохранено: {len(saved)}   Пропущено: {len(failed)}"
-        )
+        await status_msg.edit_text("\n".join(lines))
     except Exception:
         pass
