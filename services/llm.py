@@ -6,6 +6,21 @@ from openai import AsyncOpenAI
 from config import LLMSettings
 
 
+async def call_llm(
+    prompt: str,
+    settings: LLMSettings,
+    anthropic_api_key: str,
+    openrouter_api_key: str,
+) -> str:
+    """Raw LLM call with a ready-made prompt. Used by generator and other services."""
+    if settings.provider == "claude":
+        return await _call_claude(prompt, settings, anthropic_api_key)
+    elif settings.provider == "openrouter":
+        return await _call_openrouter(prompt, settings, openrouter_api_key)
+    else:
+        raise RuntimeError(f"Неизвестный провайдер: {settings.provider}")
+
+
 async def analyze_transcript(
     transcript: str,
     title: str,

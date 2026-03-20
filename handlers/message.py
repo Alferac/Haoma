@@ -13,7 +13,8 @@ from aiogram.filters import Command
 from aiogram.types import Message
 
 from config import Settings
-from reconciler import apply_plan, build_plan, extract_entities_yaml, load_index, save_index
+from reconciler import build_plan, extract_entities_yaml, load_index, save_index
+from services.generator import apply_plan_with_llm
 from services import file_writer, llm, youtube
 
 router = Router()
@@ -61,19 +62,21 @@ async def cmd_help(message: Message) -> None:
     )
 
 
-def _run_reconciler(
+async def _run_reconciler(
     analysis: str,
     title: str,
     url: str,
     channel_name: str,
+    summary_note_path: str,
     settings: Settings,
 ) -> None:
-    """Запускает reconciler если включён в настройках. Ошибки не прерывают основной поток."""
+    """Запускает reconciler + generator если включён в настройках. Ошибки не прерывают основной поток."""
     if not settings.reconciler.enabled:
         return
     try:
         entities = extract_entities_yaml(analysis)
         if not entities:
+            log.info("Reconciler [%s]: нет сущностей в YAML-блоке", title)
             return
         index = load_index(settings.reconciler.index_path)
         source_info = {
@@ -83,9 +86,21 @@ def _run_reconciler(
             "date": datetime.now().strftime("%Y-%m-%d"),
         }
         plan = build_plan(entities, index, source_info)
-        apply_plan(plan, index, settings.reconciler.vault_path, dry_run=False)
+        log.info("Reconciler plan [%s]: %s", title, plan["summary"])
+
+        entries = await apply_plan_with_llm(
+            plan=plan,
+            index=index,
+            vault_path=settings.reconciler.vault_path,
+            summary_note_path=summary_note_path,
+            settings=settings.llm,
+            anthropic_api_key=settings.anthropic_api_key,
+            openrouter_api_key=settings.openrouter_api_key,
+        )
+        for entry in entries:
+            log.info("  %s", entry)
+
         save_index(index, settings.reconciler.index_path)
-        log.info("Reconciler [%s]: %s", title, plan["summary"])
     except Exception as exc:
         log.error("Reconciler error [%s]: %s", title, exc)
 
@@ -146,7 +161,7 @@ async def _process_single_video(
         return result.title, None, str(e)
 
     log.info("SAVED: %s", result.title)
-    await asyncio.to_thread(_run_reconciler, analysis, result.title, url, result.channel_name, settings)
+    await _run_reconciler(analysis, result.title, url, result.channel_name, str(filepath), settings)
     return result.title, filepath, None
 
 
@@ -232,7 +247,7 @@ async def _handle_video(message: Message, url: str, settings: Settings) -> None:
         await status_msg.edit_text(f"❌ Ошибка при сохранении файла:\n{e}")
         return
 
-    await asyncio.to_thread(_run_reconciler, analysis, result.title, url, result.channel_name, settings)
+    await _run_reconciler(analysis, result.title, url, result.channel_name, str(filepath), settings)
 
     preview = analysis[:3000]
     if len(analysis) > 3000:
