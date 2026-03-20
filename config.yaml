@@ -52,3 +52,13 @@ output:
 
   # Максимальная длина имени файла (без расширения)
   max_filename_length: 100
+
+reconciler:
+  # Включить автоматическое обновление индекса сущностей Obsidian
+  enabled: true
+
+  # Корень vault Obsidian (для создания файлов Tools/, Architecture/ и т.д.)
+  vault_path: "/home/deploy/obsidian-notes"
+
+  # Путь к файлу индекса сущностей
+  index_path: "/home/deploy/obsidian-notes/_system/entity_index.json"

@@ -59,6 +59,13 @@ class OutputSettings:
 
 
 @dataclass
+class ReconcilerSettings:
+    enabled: bool
+    vault_path: str
+    index_path: str
+
+
+@dataclass
 class Settings:
     telegram_bot_token: str
     anthropic_api_key: str
@@ -68,6 +75,7 @@ class Settings:
     channel: ChannelSettings
     proxy: ProxySettings
     output: OutputSettings
+    reconciler: ReconcilerSettings
 
 
 def load_settings(config_path: str = "config.yaml") -> Settings:
@@ -144,5 +152,10 @@ def load_settings(config_path: str = "config.yaml") -> Settings:
             folder=output_folder,
             add_frontmatter=output_cfg.get("add_frontmatter", True),
             max_filename_length=int(output_cfg.get("max_filename_length", 100)),
+        ),
+        reconciler=ReconcilerSettings(
+            enabled=raw.get("reconciler", {}).get("enabled", False),
+            vault_path=raw.get("reconciler", {}).get("vault_path", ""),
+            index_path=raw.get("reconciler", {}).get("index_path", ""),
         ),
     )

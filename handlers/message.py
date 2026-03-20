@@ -3,6 +3,7 @@ from __future__ import annotations
 import asyncio
 import logging
 import re
+from datetime import datetime
 from pathlib import Path
 
 log = logging.getLogger(__name__)
@@ -12,6 +13,7 @@ from aiogram.filters import Command
 from aiogram.types import Message
 
 from config import Settings
+from reconciler import apply_plan, build_plan, extract_entities_yaml, load_index, save_index
 from services import file_writer, llm, youtube
 
 router = Router()
@@ -57,6 +59,35 @@ async def cmd_help(message: Message) -> None:
         "• https://www.youtube.com/channel/UCxxxxxx\n"
         "• https://www.youtube.com/c/channelname"
     )
+
+
+def _run_reconciler(
+    analysis: str,
+    title: str,
+    url: str,
+    channel_name: str,
+    settings: Settings,
+) -> None:
+    """Запускает reconciler если включён в настройках. Ошибки не прерывают основной поток."""
+    if not settings.reconciler.enabled:
+        return
+    try:
+        entities = extract_entities_yaml(analysis)
+        if not entities:
+            return
+        index = load_index(settings.reconciler.index_path)
+        source_info = {
+            "title": title,
+            "url": url,
+            "channel": channel_name,
+            "date": datetime.now().strftime("%Y-%m-%d"),
+        }
+        plan = build_plan(entities, index, source_info)
+        apply_plan(plan, index, settings.reconciler.vault_path, dry_run=False)
+        save_index(index, settings.reconciler.index_path)
+        log.info("Reconciler [%s]: %s", title, plan["summary"])
+    except Exception as exc:
+        log.error("Reconciler error [%s]: %s", title, exc)
 
 
 async def _process_single_video(
@@ -115,6 +146,7 @@ async def _process_single_video(
         return result.title, None, str(e)
 
     log.info("SAVED: %s", result.title)
+    await asyncio.to_thread(_run_reconciler, analysis, result.title, url, result.channel_name, settings)
     return result.title, filepath, None
 
 
@@ -199,6 +231,8 @@ async def _handle_video(message: Message, url: str, settings: Settings) -> None:
     except Exception as e:
         await status_msg.edit_text(f"❌ Ошибка при сохранении файла:\n{e}")
         return
+
+    await asyncio.to_thread(_run_reconciler, analysis, result.title, url, result.channel_name, settings)
 
     preview = analysis[:3000]
     if len(analysis) > 3000:

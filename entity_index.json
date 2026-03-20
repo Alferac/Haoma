@@ -1,0 +1,39 @@
+{
+  "_meta": {
+    "version": 1,
+    "last_updated": "2026-03-18T10:00:00Z",
+    "total_entities": 3
+  },
+  "entities": {
+    "claude-code": {
+      "name": "Claude Code",
+      "entity_type": "cli",
+      "domain": ["ai-agents"],
+      "sub_domain": "coding-agent",
+      "file_path": "Tools/claude-code.md",
+      "sources_count": 5,
+      "last_updated": "2026-03-15",
+      "aliases": ["claude code", "claudecode"]
+    },
+    "n8n": {
+      "name": "n8n",
+      "entity_type": "platform",
+      "domain": ["ai-agents", "devops"],
+      "sub_domain": "workflow-automation",
+      "file_path": "Tools/n8n.md",
+      "sources_count": 3,
+      "last_updated": "2026-03-10",
+      "aliases": ["n8n.io"]
+    },
+    "vibecoding": {
+      "name": "vibecoding",
+      "entity_type": "approach",
+      "domain": ["business"],
+      "sub_domain": "solo-founder",
+      "file_path": "Business/vibecoding.md",
+      "sources_count": 2,
+      "last_updated": "2026-03-12",
+      "aliases": ["vibe coding", "вайбкодинг", "vibe-coding"]
+    }
+  }
+}
