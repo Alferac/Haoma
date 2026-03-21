@@ -69,6 +69,8 @@ def _build_frontmatter(
         f"Prompt ver: {prompt_version}\n"
         f"Haoma ver: {haoma_version}\n"
         f"Text: {text_link}\n"
+        "index: true\n"
+        "Human: false\n"
         "tags:\n"
         "  - youtube\n"
         "  - summary\n"

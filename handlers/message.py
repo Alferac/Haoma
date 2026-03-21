@@ -7,6 +7,8 @@ import re
 from datetime import datetime
 from pathlib import Path
 
+import yaml
+
 log = logging.getLogger(__name__)
 
 from aiogram import Router
@@ -60,6 +62,84 @@ async def cmd_help(message: Message) -> None:
         "• https://www.youtube.com/@channelname\n"
         "• https://www.youtube.com/channel/UCxxxxxx\n"
         "• https://www.youtube.com/c/channelname"
+    )
+
+
+def _parse_frontmatter(content: str) -> dict:
+    """Извлекает YAML frontmatter из markdown-файла."""
+    match = re.match(r"^---\n(.+?)\n---", content, re.DOTALL)
+    if not match:
+        return {}
+    try:
+        return yaml.safe_load(match.group(1)) or {}
+    except Exception:
+        return {}
+
+
+def _set_index_true(filepath: Path) -> None:
+    """Проставляет index: true в frontmatter файла."""
+    content = filepath.read_text(encoding="utf-8")
+    if re.search(r"^index:", content, re.MULTILINE):
+        content = re.sub(r"^index:.*$", "index: true", content, flags=re.MULTILINE)
+    else:
+        content = re.sub(r"\n---\n", "\nindex: true\n---\n", content, count=1)
+    filepath.write_text(content, encoding="utf-8")
+
+
+@router.message(Command("reindex"))
+async def cmd_reindex(message: Message, settings: Settings) -> None:
+    source_folder = settings.output.folder
+    all_md = sorted(source_folder.glob("*.md"))
+
+    to_process: list[tuple[Path, str, dict]] = []
+    for f in all_md:
+        if f.name.startswith("Text"):
+            continue
+        content = f.read_text(encoding="utf-8")
+        fm = _parse_frontmatter(content)
+        if fm.get("index") is True:
+            continue
+        to_process.append((f, content, fm))
+
+    total = len(to_process)
+    if not total:
+        await message.answer("✅ Все статьи уже проиндексированы.")
+        return
+
+    status_msg = await message.answer(
+        f"🔄 Найдено статей для индексации: <b>{total}</b>. Начинаю..."
+    )
+
+    done = 0
+    errors = 0
+
+    for filepath, content, fm in to_process:
+        title = str(fm.get("title", filepath.stem))
+        url = str(fm.get("url", ""))
+        date = str(fm.get("date", ""))
+        source_info_date = date or datetime.now().strftime("%Y-%m-%d")
+
+        try:
+            await _run_reconciler(content, title, url, "", str(filepath), settings)
+            _set_index_true(filepath)
+            done += 1
+        except Exception as exc:
+            log.error("Reindex error [%s]: %s", title, exc)
+            errors += 1
+
+        processed = done + errors
+        if processed % 5 == 0 or processed == total:
+            try:
+                await status_msg.edit_text(
+                    f"🔄 Индексация: {processed}/{total}\n"
+                    f"✅ Готово: {done}  ❌ Ошибок: {errors}"
+                )
+            except Exception:
+                pass
+
+    await status_msg.edit_text(
+        f"✅ Индексация завершена.\n"
+        f"Обработано: {done}  ❌ Ошибок: {errors}"
     )
 
 

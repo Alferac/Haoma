@@ -22,85 +22,6 @@ log = logging.getLogger(__name__)
 
 
 # ──────────────────────────────────────────────
-#  PROMPTS
-# ──────────────────────────────────────────────
-
-_CREATE_PROMPT = """\
-Создай заметку об инструменте/концепции для базы знаний Obsidian.
-
-Данные из видео:
-- Название: {name}
-- Тип: {entity_type}
-- Домен: {domain}
-- Поддомен: {sub_domain}
-- ИИ-релевантность: {ai_relevance}
-- Связан с: {relates_to}
-- Что узнали из видео: {what_learned}
-
-Источник:
-- Видео: [{video_title}]({url})
-- Канал: {channel}
-- Дата: {date}
-
-Создай заметку строго по шаблону ниже. Заполняй только то, что ЯВНО следует из данных выше.
-Поля, которые неизвестны, — оставляй пустыми ("" или []).
-НЕ ПРИДУМЫВАЙ информацию. Не добавляй ничего от себя.
-Незаполненные секции тела заметки оставляй как "TODO".
-Верни ТОЛЬКО содержимое заметки, без пояснений.
-
----
-type: {entity_type}
-domain: [{domain}]
-sub_domain: "{sub_domain}"
-maturity: ""
-cost: ""
-ai_relevance: "{ai_relevance}"
-suitable_for: []
-project_stage: []
-team_size: []
-tags: []
----
-
-## Что это
-{what_learned}
-
-## Ключевые возможности
-- TODO
-
-## Когда использовать
-TODO
-
-## Альтернативы
-{relates_to_links}
-
-## Заметки из источников
-- [{video_title}]({url}) ({date}): {what_learned}
-"""
-
-_UPDATE_PROMPT = """\
-Обнови заметку в базе знаний Obsidian новой информацией из видео.
-
-Текущее содержимое заметки:
-{current_content}
-
-Новая информация из видео:
-- Источник: [{video_title}]({url})
-- Канал: {channel}
-- Дата: {date}
-- Роль в видео: {role_in_video}
-- Что узнали: {what_learned}
-
-Правила обновления:
-1. Добавь запись в секцию "## Заметки из источников":
-   - [{video_title}]({url}) ({date}): {what_learned}
-2. Если новая информация существенно дополняет поля frontmatter (maturity, cost, ai_relevance) — обнови их.
-3. Если появились новые ключевые возможности — добавь в "## Ключевые возможности".
-4. Всё остальное оставь без изменений.
-5. Верни ПОЛНОЕ содержимое обновлённой заметки, без пояснений.
-"""
-
-
-# ──────────────────────────────────────────────
 #  GENERATION HELPERS
 # ──────────────────────────────────────────────
 
@@ -115,7 +36,7 @@ async def _generate_create(
     domain_str = ", ".join(e.get("domain", []))
     relates_to_links = "  ".join(f"[[{r}]]" for r in e.get("relates_to", [])) or "TODO"
 
-    prompt = _CREATE_PROMPT.format(
+    prompt = settings.create_prompt.format(
         name=e["name"],
         entity_type=e.get("entity_type", "tool"),
         domain=domain_str,
@@ -142,7 +63,7 @@ async def _generate_update(
     e = decision["entity_data"]
     src = decision["source"]
 
-    prompt = _UPDATE_PROMPT.format(
+    prompt = settings.update_prompt.format(
         current_content=current_content,
         video_title=src.get("title", ""),
         url=src.get("url", ""),

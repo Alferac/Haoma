@@ -19,6 +19,10 @@ llm:
   # Промт для анализа субтитров хранится отдельно в файле. Указывать путь относительно config.yaml
   prompt_file: "analysis_prompt.md"
 
+  # Промты для генерации и обновления заметок сущностей
+  create_prompt_file: "create_prompt.md"
+  update_prompt_file: "update_prompt.md"
+
 subtitles:
   # Приоритет языков субтитров (первый найденный будет использован)
   languages:

@@ -19,6 +19,10 @@ class LLMSettings:
     temperature: float
     prompt: str
     prompt_version: str = ""
+    create_prompt: str = ""
+    create_prompt_version: str = ""
+    update_prompt: str = ""
+    update_prompt_version: str = ""
 
 
 @dataclass
@@ -114,6 +118,27 @@ def load_settings(config_path: str = "config.yaml") -> Settings:
     if not prompt_text:
         prompt_text = "Summarize the following transcript:\n\n{transcript}"
 
+    def _load_prompt_file(rel_path: str) -> tuple[str, str]:
+        """Returns (version, prompt_text) from a prompt file."""
+        path = config_file.parent.joinpath(rel_path)
+        if not path.exists():
+            raise FileNotFoundError(f"Файл промта не найден: {path}")
+        raw = path.read_text(encoding="utf-8")
+        ver, _, body = raw.partition("\n")
+        return ver.strip(), body.lstrip("\n")
+
+    create_prompt_text = ""
+    create_prompt_version = ""
+    create_prompt_file_rel = llm_cfg.get("create_prompt_file")
+    if create_prompt_file_rel:
+        create_prompt_version, create_prompt_text = _load_prompt_file(create_prompt_file_rel)
+
+    update_prompt_text = ""
+    update_prompt_version = ""
+    update_prompt_file_rel = llm_cfg.get("update_prompt_file")
+    if update_prompt_file_rel:
+        update_prompt_version, update_prompt_text = _load_prompt_file(update_prompt_file_rel)
+
     anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
     openrouter_key = os.environ.get("OPENROUTER_API_KEY", "")
 
@@ -138,6 +163,10 @@ def load_settings(config_path: str = "config.yaml") -> Settings:
             temperature=float(llm_cfg.get("temperature", 0.0)),
             prompt=prompt_text,
             prompt_version=prompt_version,
+            create_prompt=create_prompt_text,
+            create_prompt_version=create_prompt_version,
+            update_prompt=update_prompt_text,
+            update_prompt_version=update_prompt_version,
         ),
         subtitles=SubtitleSettings(
             languages=raw.get("subtitles", {}).get("languages", ["ru", "en"]),
