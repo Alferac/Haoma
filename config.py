@@ -68,6 +68,7 @@ class ReconcilerSettings:
 @dataclass
 class Settings:
     telegram_bot_token: str
+    telegram_proxy: str
     anthropic_api_key: str
     openrouter_api_key: str
     llm: LLMSettings
@@ -89,6 +90,7 @@ def load_settings(config_path: str = "config.yaml") -> Settings:
     telegram_token = os.environ.get("TELEGRAM_BOT_TOKEN", "")
     if not telegram_token:
         raise ValueError("TELEGRAM_BOT_TOKEN не задан в .env")
+    telegram_proxy = raw.get("telegram_proxy", "") or ""
 
     llm_cfg = raw.get("llm", {})
     provider = llm_cfg.get("provider", "claude")
@@ -126,6 +128,7 @@ def load_settings(config_path: str = "config.yaml") -> Settings:
 
     return Settings(
         telegram_bot_token=telegram_token,
+        telegram_proxy=telegram_proxy,
         anthropic_api_key=anthropic_key,
         openrouter_api_key=openrouter_key,
         llm=LLMSettings(

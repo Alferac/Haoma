@@ -1,3 +1,7 @@
+# Прокси для подключения к Telegram API (если сервер в РФ)
+# Примеры: socks5://127.0.0.1:10808  или  http://127.0.0.1:1080
+telegram_proxy: "socks5://127.0.0.1:10808"
+
 llm:
   # Провайдер LLM: "claude" или "openrouter"
   provider: "openrouter"
