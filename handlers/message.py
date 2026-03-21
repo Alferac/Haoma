@@ -1,6 +1,7 @@
 from __future__ import annotations
 
 import asyncio
+import html
 import logging
 import re
 from datetime import datetime
@@ -249,13 +250,13 @@ async def _handle_video(message: Message, url: str, settings: Settings) -> None:
 
     await _run_reconciler(analysis, result.title, url, result.channel_name, str(filepath), settings)
 
-    preview = analysis[:3000]
+    preview = html.escape(analysis[:3000])
     if len(analysis) > 3000:
         preview += "\n\n<i>...конспект обрезан для предпросмотра...</i>"
 
     await status_msg.delete()
     await message.answer(
-        f"<b>{result.title}</b>\n\n"
+        f"<b>{html.escape(result.title)}</b>\n\n"
         f"{preview}\n\n"
         f"─────────────────\n"
         f"💾 Файл: <code>{filepath}</code>",
