@@ -172,8 +172,22 @@ def decide_action(entity: dict, index: dict) -> dict:
 #  4. PLAN: обработка всех сущностей из видео
 # ──────────────────────────────────────────────
 
-# Маппинг entity_type → папка Obsidian
-FOLDER_MAP = {
+# Приоритет 1: domain → папка
+# Если домен явно указывает на специализированный раздел — используем его
+DOMAIN_FOLDER_MAP = {
+    "ai-agents":     "Agents",
+    "gen-ai":        "GenAI",
+    "web-dev":       "WebDev",
+    "devops":        "DevOps",
+    "knowledge-mgmt":"Knowledge",
+    "business":      "Business",
+    "marketing":     "Marketing",
+    "hardware":      "Hardware",
+    "rpa":           "RPA",
+}
+
+# Приоритет 2: entity_type → папка (fallback когда домен не специфичен)
+TYPE_FOLDER_MAP = {
     "tool":      "Tools",
     "framework": "Tools",
     "library":   "Tools",
@@ -182,10 +196,27 @@ FOLDER_MAP = {
     "cli":       "Tools",
     "language":  "Tools",
     "pattern":   "Architecture",
-    "approach":  "Business",
+    "approach":  "Architecture",
     "concept":   "Concepts",
     "case":      "Cases",
 }
+
+
+def get_folder(entity: dict) -> str:
+    """
+    Определяет папку для новой заметки.
+    Логика: сначала ищем специализированный домен, потом смотрим на тип сущности.
+    """
+    domains = entity.get("domain", [])
+    if isinstance(domains, str):
+        domains = [domains]
+
+    for domain in domains:
+        folder = DOMAIN_FOLDER_MAP.get(domain.lower().strip())
+        if folder:
+            return folder
+
+    return TYPE_FOLDER_MAP.get(entity.get("entity_type", "tool"), "Tools")
 
 
 def build_plan(extracted_entities: list[dict], index: dict, source_info: dict) -> dict:
@@ -215,7 +246,7 @@ def build_plan(extracted_entities: list[dict], index: dict, source_info: dict) -
         decision["source"] = source_info
 
         if decision["action"] == "create":
-            folder = FOLDER_MAP.get(entity.get("entity_type", "tool"), "Tools")
+            folder = get_folder(entity)
             filename = make_key(entity["name"]) + ".md"
             decision["target_file"] = f"{folder}/{filename}"
 

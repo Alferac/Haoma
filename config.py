@@ -63,6 +63,16 @@ class OutputSettings:
 
 
 @dataclass
+class EnrichSettings:
+    provider: str
+    model: str
+    max_tokens: int
+    temperature: float
+    prompt: str
+    prompt_version: str = ""
+
+
+@dataclass
 class ReconcilerSettings:
     enabled: bool
     vault_path: str
@@ -81,6 +91,7 @@ class Settings:
     proxy: ProxySettings
     output: OutputSettings
     reconciler: ReconcilerSettings
+    enrich: EnrichSettings
 
 
 def load_settings(config_path: str = "config.yaml") -> Settings:
@@ -139,6 +150,13 @@ def load_settings(config_path: str = "config.yaml") -> Settings:
     if update_prompt_file_rel:
         update_prompt_version, update_prompt_text = _load_prompt_file(update_prompt_file_rel)
 
+    enrich_cfg = raw.get("enrich", {})
+    enrich_prompt_text = ""
+    enrich_prompt_version = ""
+    enrich_prompt_file_rel = enrich_cfg.get("prompt_file")
+    if enrich_prompt_file_rel:
+        enrich_prompt_version, enrich_prompt_text = _load_prompt_file(enrich_prompt_file_rel)
+
     anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
     openrouter_key = os.environ.get("OPENROUTER_API_KEY", "")
 
@@ -189,5 +207,13 @@ def load_settings(config_path: str = "config.yaml") -> Settings:
             enabled=raw.get("reconciler", {}).get("enabled", False),
             vault_path=raw.get("reconciler", {}).get("vault_path", ""),
             index_path=raw.get("reconciler", {}).get("index_path", ""),
+        ),
+        enrich=EnrichSettings(
+            provider=provider,
+            model=enrich_cfg.get("model", llm_cfg.get("model", "claude-sonnet-4-6")),
+            max_tokens=int(enrich_cfg.get("max_tokens", 8000)),
+            temperature=float(enrich_cfg.get("temperature", 0.0)),
+            prompt=enrich_prompt_text,
+            prompt_version=enrich_prompt_version,
         ),
     )

@@ -8,7 +8,7 @@ from config import LLMSettings
 
 async def call_llm(
     prompt: str,
-    settings: LLMSettings,
+    settings,  # LLMSettings or EnrichSettings (duck-typed: needs .provider .model .max_tokens .temperature)
     anthropic_api_key: str,
     openrouter_api_key: str,
 ) -> str:

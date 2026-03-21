@@ -143,6 +143,92 @@ async def cmd_reindex(message: Message, settings: Settings) -> None:
     )
 
 
+def _set_enrich_true(filepath: Path) -> None:
+    """Проставляет enrich: true в frontmatter файла."""
+    content = filepath.read_text(encoding="utf-8")
+    content = re.sub(r"^enrich:.*$", "enrich: true", content, flags=re.MULTILINE)
+    filepath.write_text(content, encoding="utf-8")
+
+
+@router.message(Command("enrich"))
+async def cmd_enrich(message: Message, settings: Settings) -> None:
+    if not settings.enrich.prompt:
+        await message.answer("❌ Промт обогащения не настроен (enrich.prompt_file в config.yaml).")
+        return
+
+    vault = Path(settings.reconciler.vault_path)
+    if not vault.exists():
+        await message.answer("❌ Vault не найден. Проверь reconciler.vault_path в config.yaml.")
+        return
+
+    source_folder = settings.output.folder.resolve()
+
+    to_process: list[Path] = []
+    for f in sorted(vault.rglob("*.md")):
+        if f.name.startswith("Text"):
+            continue
+        try:
+            f.resolve().relative_to(source_folder)
+            continue  # файл внутри source — пропускаем
+        except ValueError:
+            pass
+        content = f.read_text(encoding="utf-8")
+        fm = _parse_frontmatter(content)
+        if fm.get("enrich") is not False:
+            continue
+        to_process.append(f)
+
+    total = len(to_process)
+    if not total:
+        await message.answer("✅ Нет заметок с enrich: false.")
+        return
+
+    status_msg = await message.answer(
+        f"✨ Найдено заметок для обогащения: <b>{total}</b>. Начинаю..."
+    )
+
+    done = 0
+    errors = 0
+
+    for filepath in to_process:
+        current_content = filepath.read_text(encoding="utf-8")
+        fm = _parse_frontmatter(current_content)
+        prompt = settings.enrich.prompt.format(
+            current_content=current_content,
+            type=fm.get("type", ""),
+            current_date=datetime.now().strftime("%Y-%m-%d"),
+        )
+        try:
+            from services.llm import call_llm
+            enriched = await call_llm(
+                prompt,
+                settings.enrich,
+                settings.anthropic_api_key,
+                settings.openrouter_api_key,
+            )
+            filepath.write_text(enriched, encoding="utf-8")
+            _set_enrich_true(filepath)
+            done += 1
+        except Exception as exc:
+            log.error("Enrich error [%s]: %s", filepath.name, exc)
+            errors += 1
+
+        processed = done + errors
+        if processed % 5 == 0 or processed == total:
+            try:
+                await status_msg.edit_text(
+                    f"✨ Обогащение: {processed}/{total}\n"
+                    f"✅ Готово: {done}  ❌ Ошибок: {errors}"
+                )
+            except Exception:
+                pass
+
+    await status_msg.edit_text(
+        f"✅ Обогащение завершено.\n"
+        f"Обработано: {done}  ❌ Ошибок: {errors}"
+    )
+
+
 async def _run_reconciler(
     analysis: str,
     title: str,
